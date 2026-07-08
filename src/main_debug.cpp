@@ -17,6 +17,8 @@
 #include <tuple>
 #include <cstdio>
 
+#include "config.h"
+
 // ---------- Paleta (lila lavanda sobre oscuro) ----------
 static const COLORREF BG          = RGB(28, 25, 43);
 static const COLORREF HEADER_BG   = RGB(36, 32, 54);
@@ -33,15 +35,6 @@ static const wchar_t* CLASS_NAME = L"PanelCelWnd";
 static const wchar_t* RUN_KEY    = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 static const wchar_t* VOL_RUNVAL = L"PhoneVolume";
 
-// Rutas
-static const std::wstring D3D11_DIR = L"C:\\Users\\Rize\\scrcpy-d3d11";
-static const std::wstring D3D11_EXE = L"C:\\Users\\Rize\\scrcpy-d3d11\\main.exe";
-static const std::wstring GPU_DIR   = L"C:\\Users\\Rize\\scrcpy-gpu\\native";
-static const std::wstring GPU_MAIN  = L"C:\\Users\\Rize\\scrcpy-gpu\\native\\main.exe";
-static const std::wstring GPU_NVDEC = L"C:\\Users\\Rize\\scrcpy-gpu\\native\\main_gpu.exe";
-static const std::wstring VOL_DIR   = L"C:\\Users\\Rize\\phone-volume";
-static const std::wstring VOL_EXE   = L"C:\\Users\\Rize\\phone-volume\\main.exe";
-
 static const int WIN_W = 600;
 static const int HH    = 58;   // alto de la cabecera
 
@@ -55,6 +48,8 @@ static int   g_winH = 700;
 static HICON g_icon = nullptr;
 static HFONT g_fTitle, g_fGroup, g_fBtn, g_fSub, g_fIco;
 static RECT  g_rClose, g_rMin;
+static std::wstring g_appDir;
+static PanelConfig g_cfg;
 
 // ---------- DEBUG log ----------
 static FILE* g_log = nullptr;
@@ -78,7 +73,7 @@ static void setVolAutostart(bool on)
 {
     HKEY k; if (RegOpenKeyExW(HKEY_CURRENT_USER, RUN_KEY, 0, KEY_SET_VALUE, &k) != ERROR_SUCCESS) return;
     if (on) {
-        std::wstring q = L"\"" + VOL_EXE + L"\"";
+        std::wstring q = L"\"" + g_cfg.volExe + L"\"";
         RegSetValueExW(k, VOL_RUNVAL, 0, REG_SZ, (const BYTE*)q.c_str(), (DWORD)((q.size()+1)*sizeof(wchar_t)));
     } else RegDeleteValueW(k, VOL_RUNVAL);
     RegCloseKey(k);
@@ -113,14 +108,14 @@ static void runAction(HWND h, int id)
 {
     dbg("runAction: id=%d\n", id);
     switch (id) {
-    case 1:  launchExe(D3D11_EXE, L"screenoff",            D3D11_DIR); break;
-    case 2:  launchExe(D3D11_EXE, L"screenoff hd",         D3D11_DIR); break;
-    case 3:  launchExe(D3D11_EXE, L"screenoff noaudio",    D3D11_DIR); break;
-    case 6:  launchExe(GPU_MAIN,  L"screenoff",            GPU_DIR);   break;
-    case 7:  launchExe(GPU_MAIN,  L"noaudio screenoff",    GPU_DIR);   break;
-    case 4:  launchExe(GPU_NVDEC, L"noaudio screenoff",    GPU_DIR, BELOW_NORMAL_PRIORITY_CLASS); break;
-    case 5:  launchExe(GPU_MAIN,  L"lite noaudio screenoff", GPU_DIR, BELOW_NORMAL_PRIORITY_CLASS, 0x30); break;
-    case 10: launchExe(VOL_EXE, L"", VOL_DIR); break;
+    case 1:  launchExe(g_cfg.d3d11Exe,    L"screenoff",              g_cfg.d3d11Dir); break;
+    case 2:  launchExe(g_cfg.d3d11Exe,    L"screenoff hd",           g_cfg.d3d11Dir); break;
+    case 3:  launchExe(g_cfg.d3d11Exe,    L"screenoff noaudio",      g_cfg.d3d11Dir); break;
+    case 6:  launchExe(g_cfg.gpuMainExe,  L"screenoff",              g_cfg.gpuDir);   break;
+    case 7:  launchExe(g_cfg.gpuMainExe,  L"noaudio screenoff",      g_cfg.gpuDir);   break;
+    case 4:  launchExe(g_cfg.gpuNvdecExe, L"noaudio screenoff",      g_cfg.gpuDir, BELOW_NORMAL_PRIORITY_CLASS); break;
+    case 5:  launchExe(g_cfg.gpuMainExe,  L"lite noaudio screenoff", g_cfg.gpuDir, BELOW_NORMAL_PRIORITY_CLASS, 0x30); break;
+    case 10: launchExe(g_cfg.volExe, L"", g_cfg.volDir); break;
     case 11: setVolAutostart(!volAutostartOn()); InvalidateRect(h, nullptr, FALSE); break;
     default: dbg("runAction: unhandled id=%d\n", id); break;
     }
@@ -329,14 +324,15 @@ static LRESULT CALLBACK WndProc(HWND h, UINT msg, WPARAM wp, LPARAM lp)
 
 int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR, int)
 {
+    g_appDir = moduleDirectory();
+    g_cfg = loadPanelConfig(g_appDir);
+
     // Abrir log de debug
-    wchar_t mp[MAX_PATH]; GetModuleFileNameW(nullptr, mp, MAX_PATH);
-    std::wstring dir = mp; dir = dir.substr(0, dir.find_last_of(L"\\/"));
-    g_log = _wfopen((dir + L"\\debug.log").c_str(), L"w");
+    g_log = _wfopen(pathJoin(g_appDir, L"debug.log").c_str(), L"w");
     dbg("Panel del Celular - DEBUG BUILD\n");
 
     // icono desde panel-cel\icon.ico si existe
-    g_icon = (HICON)LoadImageW(nullptr, (dir + L"\\icon.ico").c_str(), IMAGE_ICON,
+    g_icon = (HICON)LoadImageW(nullptr, pathJoin(g_appDir, L"icon.ico").c_str(), IMAGE_ICON,
                                0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
 
     g_fTitle = CreateFontW(26, 0, 0, 0, FW_BOLD,     0,0,0, DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY, FF_SWISS, L"Segoe UI");

@@ -16,4 +16,5 @@ if ($args -contains "debug") { $mwin = "" }
 Write-Output "Compilando $src ..."
 g++ $src -o $out -O2 -std=c++17 -municode $mwin `
     -lgdi32 -luser32 -lshell32
-if (Test-Path $out) { Write-Output "OK -> $out" } else { Write-Output "FALLO" }
+if ($LASTEXITCODE -ne 0) { throw "g++ fallo con codigo $LASTEXITCODE" }
+if (Test-Path $out) { Write-Output "OK -> $out" } else { throw "No se genero $out" }

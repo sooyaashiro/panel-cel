@@ -6,6 +6,8 @@
 *.o
 *.res
 
+panel-cel.ini
+
 .vs/
 .vscode/
 build/

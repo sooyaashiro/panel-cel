@@ -4,11 +4,17 @@ Panel del Celular is a small native Windows launcher for phone-mirroring workflo
 
 It provides a single custom Win32 interface for launching local scrcpy profiles, including D3D11, CPU, GPU/NVDEC, audio/no-audio, and a lightweight game mode. It also includes a shortcut to a phone-volume helper and a toggle for starting that helper with Windows.
 
-## Current status
+## Configuration
 
-This project is currently a personal Windows utility being prepared for public open-source release.
+The launcher reads local paths from `panel-cel.ini` next to `main.exe`.
 
-Important limitation: the current source uses local absolute paths such as `C:\Users\Rize\scrcpy-d3d11` and `C:\Users\Rize\phone-volume`. Before this is broadly reusable, those paths should be moved to a config file or auto-discovery logic.
+Start by copying the example file:
+
+```powershell
+Copy-Item .\panel-cel.example.ini .\panel-cel.ini
+```
+
+Then edit `panel-cel.ini` with your local scrcpy and phone-volume paths. The local `panel-cel.ini` file is intentionally ignored by Git.
 
 ## Features
 
@@ -22,7 +28,7 @@ Important limitation: the current source uses local absolute paths such as `C:\U
 
 - Windows 10 or newer.
 - A C++17 compiler. The included build script expects `g++` from `w64devkit`.
-- Local scrcpy wrapper executables matching the paths configured in `src/main.cpp`.
+- Local scrcpy wrapper executables matching the paths configured in `panel-cel.ini`.
 
 ## Build
 
@@ -43,13 +49,14 @@ Debug build:
 ```text
 src/main.cpp        Main launcher source.
 src/main_debug.cpp  Debug build with logging.
+src/config.h        INI configuration loader.
+panel-cel.example.ini Example local configuration.
 build.ps1           Release build script.
 build_debug.ps1     Debug build script.
 ```
 
 ## Roadmap
 
-- Replace hardcoded local paths with a config file.
 - Add screenshots and a short demo GIF.
 - Add a first GitHub release with a signed or checksummed executable.
 - Document profile setup for scrcpy users.
