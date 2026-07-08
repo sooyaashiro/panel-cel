@@ -1,0 +1,17 @@
+*.exe
+*.log
+*.cer
+*.pdb
+*.obj
+*.o
+*.res
+
+.vs/
+.vscode/
+build/
+dist/
+release/
+debug/
+
+Thumbs.db
+Desktop.ini
